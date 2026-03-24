@@ -12,7 +12,7 @@ These plugins are open-source distillations of patterns I've been using in produ
 
 ```bash
 # Add the marketplace
-/plugin marketplace add grahamnelson/utility-belt
+/plugin marketplace add https://github.com/gnelson-code/utility-belt.git
 
 # Install individual plugins
 /plugin install mob@utility-belt
@@ -34,18 +34,18 @@ Adversarial mob programming for large features. Designed for work that resembles
 
 This is implementation based on the idea of having a team of engineers at your fingertips: different personas, priorities, and roles that come together to ship something.
 
-**You don't need to be an engineer to use this, and in fact product or design folks may get more out of some steps than engineers.** `/mob:spec` and `/mob:test` are built for anyone who can describe what a feature should do. A product manager can produce a formal specification and a failing test suite without writing code — then hand both to an engineer (or to `/mob:swarm`) for implementation. The spec and test stages are force multipliers for people who know what "done" looks like but don't ship code themselves. 
+**You don't need to be an engineer to use this, and in fact product or design folks may get more out of some steps than engineers.** `/spec` and `/test` are built for anyone who can describe what a feature should do. A product manager can produce a formal specification and a failing test suite without writing code — then hand both to an engineer (or to `/swarm`) for implementation. The spec and test stages are force multipliers for people who know what "done" looks like but don't ship code themselves.
 
-The full pipeline: **spec → test → plan → implement → PR**, with adversarial gates at each stage. Use `/mob:sprint` for epics that need the full pipeline. Use `/mob:swarm` directly when you already have a plan and just need adversarial implementation — sufficient for large tickets.
+The full pipeline: **spec → test → plan → implement → PR**, with adversarial gates at each stage. Use `/sprint` for epics that need the full pipeline. Use `/swarm` directly when you already have a plan and just need adversarial implementation — sufficient for large tickets.
 
-Generally, I recommend being careful with `/mob:sprint`. You'll burn tokens and get a good result, but many tasks may not require it. For most things `/mob:swarm` is good enough. Product designers and less technical individuals with clear vision may get the most out of `/mob:sprint`. 
+Generally, I recommend being careful with `/sprint`. You'll burn tokens and get a good result, but many tasks may not require it. For most things `/swarm` is good enough. Product designers and less technical individuals with clear vision may get the most out of `/sprint`. 
 
 | Command | Description |
 |---------|-------------|
-| `/mob:sprint` | End-to-end epic delivery. Orchestrates spec, test, plan, and implementation into a single autonomous pipeline. |
-| `/mob:swarm` | Phased implementation with adversarial critique. Takes an existing plan and executes it — Architecture Gate and Quality Gate critique each phase in parallel. Critical/Major issues trigger fix loops (max 3), then escalate to the human. |
-| `/mob:spec` | Produces a formal feature specification through structured interview, drafting, and adversarial critique. |
-| `/mob:test` | Generates a failing test suite from a spec. The Red Gate validates that tests fail correctly and cover the spec's testable properties. |
+| `/sprint` | End-to-end epic delivery. Orchestrates spec, test, plan, and implementation into a single autonomous pipeline. |
+| `/swarm` | Phased implementation with adversarial critique. Takes an existing plan and executes it — Architecture Gate and Quality Gate critique each phase in parallel. Critical/Major issues trigger fix loops (max 3), then escalate to the human. |
+| `/spec` | Produces a formal feature specification through structured interview, drafting, and adversarial critique. |
+| `/test` | Generates a failing test suite from a spec. The Red Gate validates that tests fail correctly and cover the spec's testable properties. |
 
 **Seven specialized agents** handle writing and critique. Writers produce artifacts (specs, tests, plans, code). Gates tear them apart — each spawned fresh with no shared context, so they can't inherit the writer's blind spots.
 
@@ -88,7 +88,7 @@ This skill is aimed at anyone interested in making MCP design decisions, technic
 
 | Command | Description |
 |---------|-------------|
-| `/mcp-topo` | Analyze an API (OpenAPI spec, codebase, or URL) and design a tool surface. Outputs a plan consumable by `/mob:swarm`. |
+| `/mcp-topo` | Analyze an API (OpenAPI spec, codebase, or URL) and design a tool surface. Outputs a plan consumable by `/swarm`. |
 
 The plugin's core argument: mapping every API endpoint to its own MCP tool produces a tool surface that's hard to use and hard to maintain. Instead, mcp-topo groups endpoints into **interaction categories** based on consumer intent, then stress-tests the design with a devil's advocate agent that argues for 1:1 mapping.
 
@@ -96,7 +96,7 @@ Five phases: **Intake → Scope Narrowing → Surface Analysis → Hypothesis (w
 
 ## What a Mob Session Looks Like
 
-Running `/mob:sprint add-webhook-support` produces roughly this sequence:
+Running `/sprint add-webhook-support` produces roughly this sequence:
 
 1. **Spec** — Interactive interview → formal specification with numbered behavioral definitions, preconditions, invariants, and edge cases → spec-gate critique loop until zero Critical/Major findings
 2. **Test** — Test suite generated from spec with traceability (`test_TP1_webhook_delivery`, `test_ERR2_invalid_signature`) → red-gate verifies every test fails (no implementation yet) and catches weak assertions
