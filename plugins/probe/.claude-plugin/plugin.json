@@ -1,0 +1,8 @@
+{
+  "name": "probe",
+  "description": "Systematically explore unfamiliar interfaces (databases, REST APIs, MCP servers) through phased discovery, producing structured learning artifacts",
+  "version": "0.1.0",
+  "author": {
+    "name": "Graham Nelson"
+  }
+}

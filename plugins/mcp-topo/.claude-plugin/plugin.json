@@ -1,0 +1,8 @@
+{
+  "name": "mcp-topo",
+  "description": "Design MCP server tool surfaces organized by interaction categories rather than 1:1 endpoint mappings — produces plans consumable by mob",
+  "version": "0.1.0",
+  "author": {
+    "name": "Graham Nelson"
+  }
+}

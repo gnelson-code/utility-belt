@@ -1,0 +1,33 @@
+{
+  "name": "utility-belt",
+  "owner": {
+    "name": "Graham Nelson"
+  },
+  "metadata": {
+    "description": "Graham's personal suite of Claude Code skills and plugins",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "mob",
+      "source": "./plugins/mob",
+      "description": "Adversarial mob programming — iterative code improvement through parallel critic sub-agents",
+      "version": "0.1.0",
+      "author": { "name": "Graham Nelson" }
+    },
+    {
+      "name": "probe",
+      "source": "./plugins/probe",
+      "description": "Systematic phased exploration of unfamiliar interfaces, producing structured learning artifacts",
+      "version": "0.1.0",
+      "author": { "name": "Graham Nelson" }
+    },
+    {
+      "name": "mcp-topo",
+      "source": "./plugins/mcp-topo",
+      "description": "Design MCP server tool surfaces organized by interaction categories — produces plans consumable by mob",
+      "version": "0.1.0",
+      "author": { "name": "Graham Nelson" }
+    }
+  ]
+}

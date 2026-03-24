@@ -1,0 +1,8 @@
+{
+  "name": "mob",
+  "description": "Adversarial mob programming — a team of specialized sub-agents that iteratively critique and improve code through structured review loops",
+  "version": "0.1.0",
+  "author": {
+    "name": "Graham Nelson"
+  }
+}

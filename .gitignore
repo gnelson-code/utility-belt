@@ -1,0 +1,15 @@
+# Strategy notes (not for public consumption)
+notes/
+
+# Local Claude Code settings (machine-specific paths)
+.claude/settings.local.json
+
+# Plugin state files (transient process artifacts)
+.spec-state.json
+.test-state.json
+.swarm-state.json
+.sprint-state.json
+.probe-state-*.json
+.mcp-topo-state.json
+.mcp-topo-capabilities.json
+.swarm-history.jsonl
