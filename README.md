@@ -38,7 +38,11 @@ This is implementation based on the idea of having a team of engineers at your f
 
 The full pipeline: **spec → test → plan → implement → PR**, with adversarial gates at each stage. Use `/sprint` for epics that need the full pipeline. Use `/swarm` directly when you already have a plan and just need adversarial implementation — sufficient for large tickets.
 
-Generally, I recommend being careful with `/sprint`. You'll burn tokens and get a good result, but many tasks may not require it. For most things `/swarm` is good enough. Product designers and less technical individuals with clear vision may get the most out of `/sprint`. 
+Generally, I recommend being careful with `/sprint`. You'll burn tokens and get a good result, but many tasks may not require it. For most things `/swarm` is good enough. Product designers and less technical individuals with clear vision may get the most out of `/sprint`.
+
+For work that doesn't warrant the full pipeline, mob also includes **lite versions**: `/blueprint` for collaborative planning with a single adversarial pass, and `/impl` for implementation with a single quality critic that de-escalates from Opus to Sonnet after the first loop. These are the right choice for most ticket-sized work — you get adversarial critique without the token cost of formal specs, dual critics, and state file infrastructure.
+
+#### Full Pipeline
 
 | Command | Description |
 |---------|-------------|
@@ -47,13 +51,22 @@ Generally, I recommend being careful with `/sprint`. You'll burn tokens and get 
 | `/spec` | Produces a formal feature specification through structured interview, drafting, and adversarial critique. |
 | `/test` | Generates a failing test suite from a spec. The Red Gate validates that tests fail correctly and cover the spec's testable properties. |
 
-**Seven specialized agents** handle writing and critique. Writers produce artifacts (specs, tests, plans, code). Gates tear them apart — each spawned fresh with no shared context, so they can't inherit the writer's blind spots.
+#### Lite Pipeline
+
+| Command | Description |
+|---------|-------------|
+| `/blueprint` | Collaborative plan creation with adversarial hardening. Draft an implementation plan in plan mode, then harden it with a Sonnet critic. No spec required — just a description and codebase exploration. |
+| `/impl` | Lightweight phased implementation. The orchestrator runs tests, linting, and coverage directly, then a single Quality Gate reviews the code. First critique uses Opus; subsequent critiques use Sonnet. |
+
+`/blueprint` + `/impl` is the recommended path for most work. Use `/sprint` or `/swarm` when the feature is large enough that formal specifications, test-first development, or dual critics justify the cost.
+
+**Eight specialized agents** handle writing and critique. Writers produce artifacts (specs, tests, plans, code). Gates tear them apart — each spawned fresh with no shared context, so they can't inherit the writer's blind spots.
 
 | Role | Writers | Gates |
 |------|---------|-------|
 | Specification | spec-writer | spec-gate |
 | Tests | test-writer | red-gate |
-| Plan | plan-writer | *(none — plans require human judgment)* |
+| Plan | plan-writer | plan-critic |
 | Implementation | orchestrator | architecture-gate, quality-gate |
 
 All gates classify findings as **Critical → Major → Minor → Suggestion**. Critical and Major trigger fix loops. Minor and Suggestion are deferred. The same taxonomy across every gate is what makes automated triage work.
@@ -112,7 +125,7 @@ The whole pipeline runs autonomously by default. Use `--checkpoints` to pause be
 
 **Bounded loops with human escalation.** Critic loops cap at 3 iterations (spec-gate caps at 5). If issues persist after the cap, the system escalates to the human rather than looping indefinitely. Infinite loops are a failure mode, not a feature.
 
-**No plan-gate.** The spec has a gate. The tests have a gate. The implementation has two gates. The plan doesn't. Plans require human judgment about decomposition, scope, and sequencing that no critic agent has sufficient context to evaluate.
+**Plan critique is lightweight and single-pass.** The full pipeline has no plan-gate — plans require human judgment about decomposition, scope, and sequencing. The lite path (`/blueprint`) adds a Sonnet critic for a single adversarial pass, but this is a hardening step after human collaboration, not an automated gate loop. The human is still the primary reviewer.
 
 **State recovery across context compaction.** Every skill maintains a `.state.json` file tracking phase, loop count, findings, and outputs. If Claude Code's context window compresses mid-run, the skill can recover from the state file rather than restarting.
 
@@ -126,7 +139,7 @@ The plugin definitions are markdown — readable and forkable. Here's what's act
 
 ### mob internals
 
-**Parallel critic dispatch.** During implementation, the orchestrator spawns architecture-gate and quality-gate simultaneously. Both complete before triage begins — neither critic sees the other's findings, preventing groupthink.
+**Parallel critic dispatch with progressive de-escalation.** During implementation, the orchestrator spawns architecture-gate and quality-gate simultaneously. Both complete before triage begins — neither critic sees the other's findings, preventing groupthink. Loop 1 uses Opus for both critics; Loops 2–3 drop to Sonnet. The same de-escalation pattern applies across `/swarm` and `/impl`.
 
 **Orchestrator downgrade authority.** When only one of two critics flags an issue, the orchestrator can investigate and downgrade the severity — but must document its reasoning in the state file. This prevents a single overzealous critic from blocking progress while maintaining an audit trail.
 
@@ -135,6 +148,10 @@ The plugin definitions are markdown — readable and forkable. Here's what's act
 **Traceability matrices.** Every test traces to specific spec items (`test_TP1_webhook_delivery` → TP-1 → B-3, EDGE-2). Coverage tracking maps every testable property, error case, invariant, precondition, and edge case to its test — gaps are visible by inspection.
 
 **Spec formalism.** Specifications use RFC 2119 keywords (MUST/MUST NOT/MAY) and distinguish between behavioral definitions, preconditions, postconditions, invariants, and edge cases. The spec-gate rejects unfalsifiable properties — "the system should be fast" doesn't survive critique.
+
+**Progressive de-escalation.** `/impl` uses Opus for the first quality critique of each phase, then Sonnet for subsequent loops. The reasoning: Opus catches the deep structural issues on the first pass; Sonnet handles residual cleanup at lower cost. The Agent tool's `model` parameter overrides the agent's frontmatter, so the same quality-gate agent definition serves both tiers.
+
+**Orchestrator-driven verification.** In `/impl`, the orchestrator runs tests, linting, and coverage directly — not the critic agent. Tool output is captured verbatim and passed to the quality-gate as evidence. This guarantees verification actually happens (not dependent on the agent remembering to run tools) and focuses the agent's context on subjective code review rather than tool execution.
 
 ### probe internals
 
