@@ -83,6 +83,12 @@ On subsequent loops, do not reimplement the phase. Fix only the Critical and Maj
 
 Spawn the `architecture-gate` and `quality-gate` agents as fresh sub-agents simultaneously. **Do not reuse agents between loops or between phases.** Every critique run must use a new agent with no prior context.
 
+**Model selection** (use the Agent tool's `model` parameter to override agent frontmatter):
+- **Loop 1:** Spawn both agents with `model: opus`
+- **Loops 2–3:** Spawn both agents with `model: sonnet`
+
+This is progressive de-escalation — Opus catches deep structural and correctness issues on the first pass; Sonnet handles residual cleanup at lower cost.
+
 Include in each prompt:
 - The phase name and its goal (copy the relevant section from the plan verbatim — do not summarize)
 - The current loop number (e.g., "This is Loop 2 of a maximum 3")
