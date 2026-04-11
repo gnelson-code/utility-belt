@@ -1,0 +1,8 @@
+{
+  "name": "pm",
+  "description": "Program management tools for biotech PMs — generate, edit, and visualize program timelines from Excel files with a zero-setup browser editor",
+  "version": "0.1.0",
+  "author": {
+    "name": "Graham Nelson"
+  }
+}

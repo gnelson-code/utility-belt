@@ -28,6 +28,13 @@
       "description": "Design MCP server tool surfaces organized by interaction categories — produces plans consumable by mob",
       "version": "0.1.0",
       "author": { "name": "Graham Nelson" }
+    },
+    {
+      "name": "pm",
+      "source": "./plugins/pm",
+      "description": "Program management tools for biotech PMs — Excel-to-visual timeline editor with zero-setup browser editor",
+      "version": "0.1.0",
+      "author": { "name": "Graham Nelson" }
     }
   ]
 }

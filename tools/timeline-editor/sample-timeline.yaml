@@ -1,0 +1,97 @@
+title: "Sample Biotech Program Timeline"
+generated: 2026-04-11
+workstreams:
+  - id: cmc
+    name: CMC
+    collapsed: false
+  - id: clinical
+    name: Clinical
+    collapsed: false
+  - id: regulatory
+    name: Regulatory
+    collapsed: false
+tasks:
+  - id: t-001
+    name: "Process development"
+    workstream: cmc
+    start: 2026-01-05
+    end: 2026-04-30
+    status: complete
+    milestone: false
+  - id: t-002
+    name: "Process validation"
+    workstream: cmc
+    start: 2026-04-15
+    end: 2026-08-30
+    status: in_progress
+    milestone: false
+  - id: t-003
+    name: "Stability studies"
+    workstream: cmc
+    start: 2026-05-01
+    end: 2026-11-15
+    status: at_risk
+    milestone: false
+  - id: t-004
+    name: "GMP release"
+    workstream: cmc
+    start: 2026-11-15
+    end: 2026-11-15
+    status: not_started
+    milestone: true
+  - id: t-005
+    name: "Protocol finalization"
+    workstream: clinical
+    start: 2026-02-01
+    end: 2026-03-31
+    status: complete
+    milestone: false
+  - id: t-006
+    name: "Site activation"
+    workstream: clinical
+    start: 2026-04-01
+    end: 2026-07-15
+    status: delayed
+    milestone: false
+  - id: t-007
+    name: "First patient in"
+    workstream: clinical
+    start: 2026-07-15
+    end: 2026-07-15
+    status: not_started
+    milestone: true
+  - id: t-008
+    name: "Enrollment"
+    workstream: clinical
+    start: 2026-07-15
+    end: 2027-03-30
+    status: estimate
+    milestone: false
+  - id: t-009
+    name: "Pre-IND meeting prep"
+    workstream: regulatory
+    start: 2026-02-15
+    end: 2026-04-15
+    status: complete
+    milestone: false
+  - id: t-010
+    name: "IND writing"
+    workstream: regulatory
+    start: 2026-04-15
+    end: 2026-09-15
+    status: blocked
+    milestone: false
+  - id: t-011
+    name: "IND submission"
+    workstream: regulatory
+    start: 2026-09-30
+    end: 2026-09-30
+    status: not_started
+    milestone: true
+  - id: t-012
+    name: "FDA response"
+    workstream: regulatory
+    start: 2026-09-30
+    end: 2026-11-30
+    status: estimate
+    milestone: false
