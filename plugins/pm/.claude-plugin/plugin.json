@@ -1,6 +1,6 @@
 {
   "name": "pm",
-  "description": "Program management tools for biotech PMs — generate, edit, and visualize program timelines from Excel files with a zero-setup browser editor",
+  "description": "Program management tools for biotech PMs — timeline editor, adversarial risk assessment for drug pipeline critical path",
   "version": "0.1.0",
   "author": {
     "name": "Graham Nelson"
