@@ -35,6 +35,13 @@
       "description": "Program management tools for biotech PMs — Excel-to-visual timeline editor with zero-setup browser editor",
       "version": "0.1.0",
       "author": { "name": "Graham Nelson" }
+    },
+    {
+      "name": "risk",
+      "source": "./plugins/risk",
+      "description": "Adversarial risk assessment for drug pipeline critical path — interview, drafted register, and iterative critic stress-tests",
+      "version": "0.1.0",
+      "author": { "name": "Graham Nelson" }
     }
   ]
 }
