@@ -1,15 +1,16 @@
 # pm
 
-Program management tools for biotech PMs. Ships two skills and a browser-based timeline editor.
+Program management tools for biotech PMs. Ships three skills and a browser-based timeline editor.
 
 | Skill | What it does |
 |-------|-------------|
 | [`/pm:timeline`](skills/timeline/SKILL.md) | Extract, draft, and edit program timelines from prose, conversation, or structured shifts. Pairs with the [browser editor](../../tools/timeline-editor/README.md). |
 | [`/pm:assess`](skills/assess/SKILL.md) | Adversarial risk assessment for drug pipeline critical path — interviews for context, drafts a structured register, then iterates with a [critic sub-agent](agents/risk-critic.md) until stress-tested. |
+| [`/pm:exec-summary`](skills/exec-summary/SKILL.md) | Concision editor for executive communications — takes a draft, surfaces analyst questions, produces a structured exec-ready rewrite, then runs adversarial critique via [concision-critic](agents/concision-critic.md). |
 
 ## Supported inputs
 
-Both skills accept the same input surface. Hand them files directly as positional arguments.
+All three skills accept files as positional arguments. The file format table below applies to all of them.
 
 ### File formats
 
@@ -43,12 +44,15 @@ plugins/pm/
 ├── .claude-plugin/plugin.json
 ├── commands/
 │   ├── timeline.md
-│   └── assess.md
+│   ├── assess.md
+│   └── exec-summary.md
 ├── skills/
 │   ├── timeline/SKILL.md
-│   └── assess/SKILL.md
+│   ├── assess/SKILL.md
+│   └── exec-summary/SKILL.md
 ├── agents/
-│   └── risk-critic.md
+│   ├── risk-critic.md
+│   └── concision-critic.md
 └── README.md
 
 tools/timeline-editor/          # paired browser tool for /pm:timeline
@@ -62,4 +66,7 @@ notes/risk/                     # output directory for /pm:assess artifacts
 ├── portfolio-*.md              # portfolio context files
 ├── register-*.md               # risk registers
 └── exec-summary-*.md           # executive summaries
+
+notes/exec/                     # output directory for /pm:exec-summary artifacts
+└── {slug}-{date}.md            # exec summaries
 ```
