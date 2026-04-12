@@ -7,7 +7,8 @@ Adversarial risk assessment for drug pipeline critical path. An orchestrator int
 ```
 ┌─────────────────────────────────────────────────┐
 │  /pm:assess  (orchestrator)                     │
-│  1. Interview → portfolio context file          │
+│  1. Analyze input files → interview gaps →      │
+│     portfolio context file                      │
 │  2. Draft risk register                         │
 │  3. Critic loop (Opus → Sonnet, max 4 rounds)  │
 │  4. Executive summary                           │
@@ -27,7 +28,13 @@ Adversarial risk assessment for drug pipeline critical path. An orchestrator int
 ## Usage
 
 ```bash
-# Fresh assessment — starts the interview
+# Seed from a timeline YAML and a strategy doc
+/pm:assess phase2-timeline.yaml ~/Desktop/program-alpha-strategy.pdf
+
+# Seed from an Excel file
+/pm:assess ~/Downloads/master-timeline.xlsx
+
+# No input files — pure interview
 /pm:assess
 
 # List existing portfolio context files
@@ -44,7 +51,7 @@ Adversarial risk assessment for drug pipeline critical path. An orchestrator int
 
 **User always wins.** When the critic challenges a risk and you disagree, you win. The critic's objection is logged as a dissent on that risk entry — an audit trail of what was challenged and why you held firm.
 
-**Interview before analysis.** The skill parses whatever you paste, extracts what it can, and only asks for what's missing. Critical path is mandatory; without it, the skill won't proceed. A Sonnet-level critic checks whether the context is sufficient before analysis begins.
+**Files first, interview second.** Hand it timelines (Excel, YAML, JSON), strategy docs, or PDFs — the skill analyzes them and extracts programs, stages, timelines, dependencies, and critical-path signals. The interview only asks for what the files left open. If you already have a `/pm:timeline` YAML, most of the interview is pre-filled. Critical path is mandatory; without it, the skill won't proceed. A Sonnet-level critic checks whether the context is sufficient before analysis begins.
 
 **Progressive de-escalation.** Opus runs the first critic pass on the register (catches structural gaps, missed categories, bad severity scoring). Sonnet handles iterations 2–4 (residual cleanup). Hard cap at 4 iterations.
 

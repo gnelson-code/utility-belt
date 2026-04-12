@@ -5,7 +5,7 @@ description: |
   Interviews for portfolio context, drafts a structured risk register, then runs a critic sub-agent through iterative stress-tests (Opus → Sonnet) until no Critical/Major findings remain or iteration 4 hits.
   User always wins disagreements; critic objections are logged as dissents for audit trail.
 user-invocable: true
-argument-hint: "[--context <name-or-path>] [--list]"
+argument-hint: "[input-file-path ...] [--context <name-or-path>] [--list]"
 ---
 
 You are the orchestrator of a risk assessment session. Your job is to produce a structured risk register for a drug pipeline portfolio that has been adversarially stress-tested by an independent critic. You handle the interview, the drafting, and the triage. The critic handles the challenge.
@@ -35,19 +35,35 @@ All artifacts go under `notes/risk/`:
 
 ### Parse Arguments
 
+- **Positional arguments** (file paths) → input files to analyze before the interview. Accepts the same formats as `/pm:timeline`: unstructured docs (markdown, plain text, PDF) or structured data (Excel `.xlsx`/`.xls`, YAML `.yaml`/`.yml`, JSON `.json`). Multiple files can be provided. These are the primary data seed — the interview fills gaps the files leave open.
 - `--list` → print every `notes/risk/portfolio-*.md` file with its slug, date, and the first non-frontmatter heading, then **stop**. Do not enter the interview or analysis flow.
 - `--context <name-or-path>` → load an existing portfolio context file. If the argument is a bare name (no path separator), look for `notes/risk/portfolio-{name}*.md` and use the most recent match. If the file exists, enter **Incremental Update** mode. If it does not exist, tell the user and offer to start a fresh interview.
-- No arguments → enter **Fresh Interview** mode.
+- No arguments and no files → enter **Fresh Interview** mode with no data seed.
 
 ---
 
 ## Fresh Interview
 
-The goal is to build a portfolio context file that is specific enough for the critic to attack later. Parse whatever the user provides first; ask only for what's missing.
+The goal is to build a portfolio context file that is specific enough for the critic to attack later. Analyze input files first, then interview for what's missing.
 
-### Step 1: Parse existing input
+### Step 1: Analyze input files
 
-The user may have pasted a war doc, timeline, prior assessment, or freeform notes into the prompt alongside the `/risk:assess` invocation. Read all of it. Extract anything matching the required or soft fields below.
+If the user provided input files (positional arguments) or pasted content into the prompt, this is your primary data seed. Analyze it **before** asking any questions.
+
+**Structured files (Excel, YAML, JSON):**
+
+- If the file matches the `/pm:timeline` canonical schema (has `workstreams` and `tasks` keys in YAML/JSON, or columns matching the timeline column synonyms in Excel), extract: program name(s) from the title or workstream names, task names and dates (which reveal stage and timeline), status values (which reveal what's at risk, blocked, or delayed), and workstream structure (which reveals functional areas in play).
+- If the file is a prior risk register or assessment, extract: programs, risk categories already identified, severity scores, mitigations, and critical-path descriptions.
+- If the file is some other structured format, extract whatever maps to the required fields below.
+
+**Unstructured files (markdown, plain text, PDF):**
+
+- Read the full document. Extract anything matching the required or soft fields below: program names, regulatory pathways, development stages, timeline references, dependency descriptions, risk language, milestone descriptions.
+- Pay attention to language that implies critical path without naming it explicitly — phrases like "rate-limiting," "must complete before," "on the critical path," "blocking," "long-lead," "pacing item."
+
+**Multiple files:** Analyze all files. Cross-reference — a timeline file gives you dates and structure; a strategy doc gives you rationale and context. Information from one file may fill gaps left by another.
+
+After analysis, you should have a partial picture of the portfolio. Proceed to Step 2 with whatever you extracted. The interview (Steps 3–4) exists only to fill what the files left open.
 
 ### Step 2: Required fields
 
@@ -435,17 +451,26 @@ Flow continues from **Draft Risk Register** above. A new register file is create
 ## Examples
 
 ```bash
-# Fresh assessment — starts the interview
-/risk:assess
+# Fresh assessment from a timeline YAML and a strategy doc
+/pm:assess phase2-timeline.yaml ~/Desktop/program-alpha-strategy.pdf
+
+# Fresh assessment from an Excel file
+/pm:assess ~/Downloads/master-timeline.xlsx
+
+# Fresh assessment with no input files — pure interview
+/pm:assess
 
 # List existing portfolio context files
-/risk:assess --list
+/pm:assess --list
 
 # Re-analyze with updated context
-/risk:assess --context portfolio-program-alpha-2026-04-11.md
+/pm:assess --context portfolio-program-alpha-2026-04-11.md
 
 # Re-analyze by slug (finds most recent match)
-/risk:assess --context program-alpha
+/pm:assess --context program-alpha
+
+# Incremental update with new files
+/pm:assess --context program-alpha ~/Desktop/updated-timeline.xlsx
 ```
 
 ---
