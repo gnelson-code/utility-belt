@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Graham's personal suite of Claude Code skills and plugins",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
@@ -26,6 +26,13 @@
       "name": "mcp-topo",
       "source": "./plugins/mcp-topo",
       "description": "Design MCP server tool surfaces organized by interaction categories — produces plans consumable by mob",
+      "version": "0.1.0",
+      "author": { "name": "Graham Nelson" }
+    },
+    {
+      "name": "mcp-eval",
+      "source": "./plugins/mcp-eval",
+      "description": "Evaluate the attached MCP set via agent-driven scenarios and adversarial friction critique — companion to mcp-topo",
       "version": "0.1.0",
       "author": { "name": "Graham Nelson" }
     }
