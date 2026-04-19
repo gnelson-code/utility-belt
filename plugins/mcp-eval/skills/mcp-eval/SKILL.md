@@ -27,7 +27,9 @@ You are the primary evaluator because you are the first consumer of these MCPs. 
   "eval_name": "<name>",
   "started": "<ISO timestamp>",
   "last_updated": "<ISO timestamp>",
-  "status": "discovering | interviewing | scoping | scoped | executing | critiquing | reporting | complete",
+  "session_started": "<ISO, set at Phase 4 start>",
+  "session_ended": "<ISO, set when execution terminates>",
+  "status": "discovering | interviewing | scoping | scoped | executing | critiquing | critic_failed | reporting | complete",
   "config": {
     "call_budget_per_scenario": 20,
     "wallclock_budget_minutes": 15,
@@ -65,6 +67,12 @@ You are the primary evaluator because you are the first consumer of these MCPs. 
   ],
   "execution": [],
   "critic_findings": [],
+  "critic_findings_dropped_raw": [],
+  "unmapped_mcp_names": [],
+  "critic_summary": "",
+  "missing_critic_summary": false,
+  "critic_failure_path": null,
+  "dangling_citations": [],
   "report_path": null
 }
 ```
@@ -88,7 +96,7 @@ Look for `mcp-evals/mcp-eval-<name>/state.json`. If it exists:
 
 - Validate: must be valid JSON with a `status` field.
 - If `status: "complete"`, inform the user the evaluation is finalized and ask whether to start a new one (use a different `--name`) or overwrite.
-- If `status` is anything else, present the current phase and ask whether to resume or restart.
+- If `status` is anything else, present the current phase and ask whether to resume or restart. When resuming Phase 5 specifically (`status: "critiquing"`): check whether `mcp-evals/mcp-eval-<name>/critic-output.md` exists on disk. If it does and `critic_findings[]` in state is empty, offer three options: (1) re-parse from the existing `critic-output.md` (cheap, deterministic — the intended resume path after a mid-parse crash), (2) re-spawn the friction-critic from scratch (expensive, non-deterministic), (3) restart. Default to option 1 unless the user selects otherwise. The sidecar file was written before parse specifically to make this resume cheap — the orchestrator must actually consult it.
 
 If no state exists, create `mcp-evals/mcp-eval-<name>/` and write an initial `state.json` with `status: "discovering"`, timestamps populated, and `config` populated from parsed args.
 
@@ -272,7 +280,7 @@ Run each scenario live. Every tool call — MCP or non-MCP — produces exactly 
 
 If any precondition fails, abort with a clear error. Do not advance state.
 
-Transition `status: "executing"` and record `started` timestamp on the session.
+Transition `status: "executing"` and record `session_started` (top-level state field) with the current ISO timestamp. On the final transition out of execution, also write `session_ended`. Phase 6's "Duration" field is computed as `session_ended − session_started`, formatted as `<minutes>m <seconds>s` (e.g., `12m 34s`). If `session_ended` is absent (crash before completion), render Duration as `incomplete`.
 
 ### Transcript File
 
@@ -412,10 +420,187 @@ Exit without spawning the critic.
 
 ## Phase 5: Critic Pass
 
-*Not yet implemented. Shipped in plan Phase 5.*
+Hand the transcript to a fresh Sonnet critic. You (the orchestrator) do not audit your own transcript — you spawned the critic precisely because you cannot be trusted to grade yourself.
+
+### Preconditions
+
+- `state.json` has `status: "critiquing"`.
+- `transcript.jsonl` exists and is non-empty. If every scenario aborted before any logged call was made (e.g., immediate wallclock abort, or every MCP was `skip`), proceed anyway — the critic will report plainly that there was nothing to evaluate, and that is itself a useful signal.
+
+### Spawn the Critic
+
+Use the Agent tool with `subagent_type: "friction-critic"` and a self-contained prompt. The critic starts with no conversation context; the prompt is its entire brief.
+
+Prompt template (fill in the paths and MCP list):
+
+```
+Transcript: <absolute path to mcp-evals/mcp-eval-<name>/transcript.jsonl>
+State: <absolute path to mcp-evals/mcp-eval-<name>/state.json>
+Attached MCPs: <comma-separated list of attached_mcps[].name>
+
+Read all three inputs before forming findings. For each attached MCP whose
+`source` config is readable, consult that config for tool descriptions and
+parameter schemas before making `glue_code` severity judgments. Emit findings
+in the format specified in your agent instructions. Every finding must cite
+≥1 transcript id.
+```
+
+Run the critic to completion in the foreground — its output is required before the report can be written.
+
+### Persist Raw Output First
+
+Before parsing, write the critic's complete response to `mcp-evals/mcp-eval-<name>/critic-output.md`. This preserves the detail prose (which the structured parse discards) and makes a mid-parse crash cheap to resume from — rerun parsing against the file rather than re-spawning the critic.
+
+### Parse Findings
+
+The critic's output is markdown. Parse by heading using this exact regex, applied in multiline mode (`^` and `$` anchor per-line):
+
+```
+^### \[(CRITICAL|MAJOR|MINOR|SUGGESTION)\] (glue_code|redundant_calls|response_shape|parameter_inference|cross_mcp): (\S.*?)\s*$
+```
+
+The `\S.*?` summary group requires a non-whitespace first character and forbids trailing whitespace — this rejects `### [MAJOR] glue_code:: duplicated` and `### [MAJOR] glue_code: ` (empty after colon) rather than silently accepting them.
+
+For each matched heading, read the following lines until the next `###` or `##` heading. Extract:
+
+- `severity` — title-case the wire token (`CRITICAL` → `Critical`, etc.).
+- `dimension` — the captured dimension token verbatim.
+- `summary` — the captured trailing text, trimmed.
+- `mcp_name` — from the `MCP: <name>` line. Normalize the value by the following rule:
+  - If the line is missing or the value is empty, record `"unattributed"`.
+  - If the value is literally `cross-mcp`, record `"cross-mcp"`.
+  - If the value matches some `attached_mcps[].name` (case-sensitive exact match), record that name.
+  - Otherwise (value is present but does not match any attached MCP and is not `cross-mcp`), record `"unattributed"` and append the original malformed name to `unmapped_mcp_names[]` in state. This ensures every finding in `critic_findings[]` has an `mcp_name` that the Phase 6 renderer can route — a hallucinated or misspelled MCP name cannot produce a finding that is counted in the Headline but rendered nowhere. The caveats surface `unmapped_mcp_names[]` when non-empty so the user sees the critic's original attribution.
+- `evidence_ids` — split the `Evidence: <ids>` line on commas, strip whitespace. Each token must match the transcript id shape `^S\d+-\d+$` (the zero-padding is not required for parse acceptance, only id existence is, which the Phase 6 validation step checks). Tokens that do not match this shape are rejected with the whole finding dropped to `critic_findings_dropped_raw[]` — a stray word like `(see Bash)` is a parse-level error, not a dangling citation. If no evidence line is present or every token is rejected, drop the finding for the same reason.
+- `recommendation` — the `Recommendation: <text>` line. Empty is permitted; record as empty string.
+
+**Dropped headings** — any heading that does not match the regex, or any matched heading whose body fails extraction (missing MCP line is *not* a drop; missing/invalid Evidence *is* a drop), is recorded verbatim to `critic_findings_dropped_raw[]` in state (the entire heading line plus its body block up to the next `###`/`##`). The `critic_findings_dropped` counter in state is `len(critic_findings_dropped_raw)`. Phase 6 surfaces both the count and the raw lines in caveats when > 0, so a lost Critical finding is recoverable by inspection rather than invisible.
+
+Write each accepted finding to `critic_findings[]` with a sequential `id` (`F1`, `F2`, …).
+
+### Extract Critic Summary
+
+Locate the critic's summary block using this rule, applied to the raw critic output:
+
+1. Find the line matching `^## Summary\s*$` (exact heading, case-sensitive).
+2. Capture everything from the line *after* that heading to either the next `^## ` heading or end of file, whichever comes first. Trim leading and trailing whitespace.
+3. Normalize severity tokens inside this captured text: replace every occurrence of `[CRITICAL]`, `[MAJOR]`, `[MINOR]`, `[SUGGESTION]` with their title-case equivalents. This keeps the report's casing consistent end-to-end even if the critic cites its own findings inside the summary.
+4. Write the normalized text to `critic_summary` in state.
+
+If step 1 finds no matching heading, `critic_summary` is left empty and a `missing_critic_summary: true` flag is set in state. Phase 6 surfaces this in caveats.
+
+### Critic Output Sanity Check
+
+Before transitioning to `reporting`, verify the critic produced usable output. A critic run is considered **failed** if ALL of the following hold:
+
+- Zero headings matched the Findings regex.
+- `critic_findings_dropped_raw[]` is empty (no malformed attempts either — the critic produced nothing heading-shaped).
+- `critic_summary` is empty (no `## Summary` block either).
+
+On failure, do **not** transition to `reporting`. Set `status: "critic_failed"`, record the raw output path in state under `critic_failure_path`, and halt with a message telling the user the critic returned unparseable output. The user can inspect `critic-output.md` and rerun Phase 5 after adjusting the critic or the transcript. A critic that legitimately found nothing to flag will still produce a `## Summary` saying so — that is a successful run with zero findings, distinct from a failed run.
+
+### Transition
+
+After parsing and the sanity check passes, update `state.json` with `status: "reporting"`.
 
 ---
 
 ## Phase 6: Report
 
-*Not yet implemented. Shipped in plan Phase 5.*
+Write `mcp-evals/mcp-eval-<name>/report.md`. This is the user-facing artifact. Every finding must cite ≥1 transcript id that actually exists in `transcript.jsonl` — a report citing a nonexistent id is a bug.
+
+### Structure
+
+```markdown
+# MCP Evaluation: <name>
+
+**Date:** <started ISO>
+**Duration:** <session wallclock, e.g. "12m 34s">
+**Attached MCPs:** <count> — <comma-separated names>
+**Scenarios run:** <total> (<aborted count> aborted)
+
+## Headline
+
+<N Critical, N Major, N Minor, N Suggestion findings>
+
+<1–2 sentence synthesis of the critic's own summary — not a rewrite, a quotation or faithful paraphrase.>
+
+## Per-MCP Findings
+
+### <mcp name>
+
+- **[Critical] glue_code:** <summary>
+  - Evidence: `S1-03`, `S1-07`
+  - Recommendation: <recommendation text>
+
+- **[Major] redundant_calls:** <summary>
+  - Evidence: `S2-12`
+  - Recommendation: <recommendation text>
+
+### <next mcp name>
+...
+
+_If an attached MCP produced zero findings, still list it with "No findings — surface behaved well in the scenarios run."_
+
+## Unattributed Findings
+
+_Render this section only if any `critic_findings[].mcp_name` is `"unattributed"` (the critic omitted or malformed the `MCP:` line). Same bullet format as per-MCP blocks. The existence of this section is itself a signal the critic's output was partially malformed — counts reconcile with the Headline._
+
+## Cross-MCP Friction
+
+<One bullet per `mcp_name: "cross-mcp"` finding, same format as per-MCP blocks.>
+
+_If there are no cross-MCP findings, write "No cross-MCP handoffs were exercised OR none produced friction." Distinguish these two cases using `scenarios[].targets_mcps` — if no scenario targeted ≥2 MCPs, say "not exercised"; otherwise say "none produced friction."_
+
+## Skipped MCPs
+
+- `<mcp name>` — disposition: `skip`. <notes from safety_dispositions[].notes>
+- `<mcp name>` — filtered out at discovery: <filtered_mcps[].reason>
+
+_Omit this section if no MCPs were skipped or filtered._
+
+## Caveats
+
+- <any manifest-unreadable notes surfaced by the critic>
+- <dropped-heading count if > 0; include the raw dropped headings from `critic_findings_dropped_raw[]` so lost findings are recoverable>
+- <unmapped MCP names from `unmapped_mcp_names[]` if non-empty — "critic attributed findings to '<name>' which is not an attached MCP; routed to Unattributed">
+- <dangling citations from `dangling_citations[]` with finding id, cited id, and reason>
+- <MCPs with `tools: []` noted as not enumerable>
+
+_Omit this section if empty._
+
+## Artifacts
+
+- Transcript: `transcript.jsonl` (<N> entries)
+- State: `state.json`
+- Critic raw output: `critic-output.md` (full critic response; only the `## Summary` block is mirrored into `state.json` under `critic_summary`)
+```
+
+### Validation Before Write
+
+For every finding in `critic_findings[]`, validate its citations in two passes. A finding that fails either pass is kept in the report (the user needs to see unverifiable claims), but the specific failure is recorded in state under `dangling_citations[]` and surfaced in the report's Caveats section.
+
+**Pass 1 — id existence.** Every token in `evidence_ids[]` must appear as an `id` field on some line of `transcript.jsonl`. Missing ids are recorded as `{ "finding_id": "F3", "cited_id": "S4-12", "reason": "id not found in transcript" }`.
+
+**Attribution-neutral ids.** Synthetic transcript entries created by the safety/budget machinery carry no MCP identifier by design: `__budget_abort__`, `__wallclock_abort__`, and `__blocked__` entries that the critic cites as context should not drag an otherwise valid finding into the dangling bucket. Classify a cited id as *attribution-neutral* if the transcript entry's `tool` field is `__budget_abort__`, `__wallclock_abort__`, or `__blocked__`. Attribution-neutral ids neither pass nor fail Pass 2 — they are ignored for the purpose of satisfying the rule, but they do not by themselves cause a dangling-citation warning.
+
+**Pass 2 — attribution consistency.** This pass catches findings citing ids from the wrong scope. Apply after excluding attribution-neutral ids:
+
+- **For MCP-scoped findings** (`mcp_name` is a real attached MCP name, not `cross-mcp` or `unattributed`): at least one non-neutral cited transcript entry must either (a) have a `tool` field starting with `mcp__<mcp_name>__`, or (b) belong to a `scenario_id` whose `scenarios[].targets_mcps` includes `mcp_name`. A finding whose entire non-neutral citation set fails both tests gets a `dangling_citations[]` entry with `reason: "no cited id plausibly attributed to <mcp_name>"`. If every cited id is attribution-neutral (no non-neutral ids to test), the finding gets `reason: "all cited ids are attribution-neutral — cannot verify attribution"`.
+- **For `cross-mcp` findings:** non-neutral cited ids must collectively span ≥2 different MCPs (by `mcp__<name>__` prefix or `scenarios[].targets_mcps` membership). A cross-mcp finding whose non-neutral evidence all points to a single MCP, or whose evidence is entirely attribution-neutral, gets `reason: "cross-mcp finding evidence spans fewer than 2 MCPs"`.
+- **For `unattributed` findings:** skip attribution validation — the MCP scope is already known to be malformed and Pass 1 is the only check.
+
+Dangling citations do not drop findings. The Caveats section renders each entry so the user sees exactly which claims could not be verified.
+
+### Finalize
+
+- Write `report_path: "mcp-evals/mcp-eval-<name>/report.md"` to state.
+- Update `status: "complete"` and `last_updated`.
+- Print to the user:
+  ```
+  Evaluation complete: <name>
+  Report: <absolute path to report.md>
+  Findings: <N Critical, N Major, N Minor, N Suggestion>
+  ```
+
+The skill exits after printing. The user reads the report.

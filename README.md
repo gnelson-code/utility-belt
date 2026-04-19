@@ -18,6 +18,7 @@ These plugins are open-source distillations of patterns I've been using in produ
 /plugin install mob@utility-belt
 /plugin install probe@utility-belt
 /plugin install mcp-topo@utility-belt
+/plugin install mcp-eval@utility-belt
 ```
 
 ## Model Configuration
@@ -107,6 +108,22 @@ The plugin's core argument: mapping every API endpoint to its own MCP tool produ
 
 Five phases: **Intake → Scope Narrowing → Surface Analysis → Hypothesis (with devil's advocate) → Plan Output**.
 
+### mcp-eval
+
+Companion to mcp-topo. Where mcp-topo *designs* MCP tool surfaces, mcp-eval *grades* them in practice. Claude exercises the full set of attached MCPs against user-approved scenarios, logs every tool call with a self-reported justification, then hands the transcript to a fresh Sonnet critic (`friction-critic`) for adversarial review.
+
+The thesis is the same as mcp-topo: the first consumer of an MCP is an agent, so evaluation needs an agentic perspective. A human reading the tool list will not notice the ten-line Bash glue the agent reached for when an MCP came up short. A transcript of every call, audited by a separate critic, does.
+
+This plugin is aimed at anyone responsible for shipping an MCP surface — authors, platform teams, and product folks deciding whether a tool surface is ready. It requires the MCPs to be installed and attached to the current Claude Code session, and the first step of any run is a safety interview that classifies each MCP as `read_only`, `sandboxed`, or `skip`. Destructive evaluation is opt-in per MCP and bounded to user-specified test resources.
+
+| Command | Description |
+|---------|-------------|
+| `/mcp-eval` | Run an evaluation against the currently attached MCPs. Interviews safety dispositions, captures scenarios, executes with structured logging, produces a report. |
+
+Five friction dimensions the critic audits: **glue_code**, **redundant_calls**, **response_shape**, **parameter_inference**, **cross_mcp**. Every finding cites specific transcript ids as evidence; the orchestrator cannot grade itself.
+
+The main loop is deliberately adversarial. Self-reported `justification` fields — required on every non-MCP call — are treated as claims to be verified against the MCPs' own manifests, not as ground truth. A capability gap the orchestrator rationalizes away is exactly the friction the critic is spawned to catch.
+
 ## What a Mob Session Looks Like
 
 Running `/sprint add-webhook-support` produces roughly this sequence:
@@ -189,7 +206,11 @@ utility-belt/
 │   ├── probe/
 │   │   ├── commands/
 │   │   └── skills/
-│   └── mcp-topo/
+│   ├── mcp-topo/
+│   │   ├── agents/
+│   │   ├── commands/
+│   │   └── skills/
+│   └── mcp-eval/
 │       ├── agents/
 │       ├── commands/
 │       └── skills/
