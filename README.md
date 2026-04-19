@@ -194,6 +194,20 @@ The plugin definitions are markdown — readable and forkable. Here's what's act
 
 **Anti-pattern comparison.** Every design is presented alongside what a 1:1 mapping would produce — real tool count, redundant parameter passing, context fragmentation, and token cost. The comparison honestly acknowledges where the devil's advocate identified legitimate splits.
 
+### mcp-eval internals
+
+**Two-phase transcript logging.** Every tool call appends a `transcript.jsonl` line before dispatch (with `result_shape: null`) and rewrites that same line in place by `id` after dispatch. A crash mid-dispatch leaves a known null-shape signature — not a duplicate, not a silent drop. The invariant is one entry per logical call.
+
+**Safety enforced against raw args, not summaries.** The sandbox check inspects the argument object being passed to the tool, never the redacted `args_summary`. A test resource matches if the arg value equals it or is a substring of it; the reverse direction does not match, so `eval-playground` in the allowlist never permits a call against `eval-playground-production`. Read/write classification splits tool names on `_` into tokens so `list_closed_issues` doesn't trip on `close` but `get_or_create_issue` correctly matches `create`.
+
+**Literal approval tokens.** The scenario approval gate matches exact `approve` or `user-only` on the trimmed-lowercased response. `"yes"`, `"lgtm"`, `"approve please"` are treated as edit requests and re-prompt. The rigidity is intentional — the gate is the last defense against running scenarios the user didn't fully endorse.
+
+**Critic reads the manifest, not just the name list.** Before writing a `glue_code` finding, the `friction-critic` opens the MCP's source config (`.mcp.json`, `~/.claude.json`) for tool descriptions and parameter schemas. A Critical severity requires manifest-level evidence that the capability covers the orchestrator's justification. If the source is unreadable, findings for that MCP are capped at Major and the limitation is surfaced in the report.
+
+**Citation validation without dropping findings.** Every finding's cited transcript ids are checked in two passes: existence in the transcript, and attribution consistency (for MCP-scoped findings, at least one non-neutral cited id must plausibly attribute to the named MCP; for cross-MCP findings, evidence must span ≥2 MCPs). Failures don't remove findings from the report — they surface in Caveats so the user sees exactly which claims couldn't be verified. Synthetic entries (`__blocked__`, `__budget_abort__`, `__wallclock_abort__`) are attribution-neutral and don't drag findings into the dangling bucket.
+
+**Raw critic output persisted before parse.** `critic-output.md` is written verbatim before the orchestrator attempts to parse findings. A mid-parse crash resumes from the file rather than re-spawning the critic, making Phase 5 cheap to retry.
+
 ## Repository Structure
 
 ```
