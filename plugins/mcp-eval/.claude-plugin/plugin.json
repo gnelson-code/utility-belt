@@ -1,0 +1,8 @@
+{
+  "name": "mcp-eval",
+  "description": "Evaluate the attached MCP set via agent-driven scenarios and adversarial friction critique — companion to mcp-topo",
+  "version": "0.1.0",
+  "author": {
+    "name": "Graham Nelson"
+  }
+}
