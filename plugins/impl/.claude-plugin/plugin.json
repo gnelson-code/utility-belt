@@ -1,0 +1,8 @@
+{
+  "name": "impl",
+  "description": "Lightweight implementation with a single quality critic and progressive de-escalation — implements plan phases with inline verification and quality-gate review",
+  "version": "0.1.0",
+  "author": {
+    "name": "Graham Nelson"
+  }
+}

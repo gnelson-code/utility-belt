@@ -1,0 +1,8 @@
+{
+  "name": "blueprint",
+  "description": "Collaborative plan creation with adversarial hardening — draft a plan interactively, then validate it with a critic agent",
+  "version": "0.1.0",
+  "author": {
+    "name": "Graham Nelson"
+  }
+}

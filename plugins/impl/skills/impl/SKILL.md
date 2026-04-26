@@ -204,7 +204,7 @@ The following issues could not be resolved:
 [List all unresolved Critical and Major issues with full context]
 
 To resume after resolving:
-  /mob:impl path/to/plan.md --from-phase "[PHASE NAME]"
+  /impl path/to/plan.md --from-phase "[PHASE NAME]"
 
 Or provide guidance here.
 ```

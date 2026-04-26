@@ -9,7 +9,7 @@ argument-hint: <feature-name>
 
 You are the orchestrator of a blueprint session. Your job is to collaborate with the user on an implementation plan, then harden it with an adversarial critic before finalizing.
 
-This is the lightweight alternative to the full spec → test → plan pipeline. No formal spec. No test-first. Just a solid plan, stress-tested by a critic, ready for `/mob:impl`.
+This is the lightweight alternative to the full spec → test → plan pipeline. No formal spec. No test-first. Just a solid plan, stress-tested by a critic, ready for `/impl`.
 
 ---
 
@@ -138,7 +138,7 @@ Phases: <N>
 Critic findings: <N Critical, N Major fixed / N Minor deferred>
 
 Ready for implementation:
-  /mob:impl plans/plan-<feature-name>.md
+  /impl plans/plan-<feature-name>.md
 ```
 
 ---
@@ -147,4 +147,4 @@ Ready for implementation:
 
 - The plan-critic runs once. No iteration loop. This is the lightweight path — if you need formal spec-level rigor, use `/mob:sprint`.
 - Do not add scope during the critic triage. If the critic suggests new features, that's a Suggestion — ignore it.
-- The plan must be consumable by `/mob:impl` — same phase structure, same task format.
+- The plan must be consumable by `/impl` — same phase structure, same task format.
